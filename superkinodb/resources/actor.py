@@ -7,6 +7,18 @@ from superkinodb import db
 from superkinodb.db_models import Actor
 from superkinodb.consts import *
 from superkinodb.utils import SuperkinodbBuilder, error_response
+from werkzeug.routing import BaseConverter
+from werkzeug.exceptions import NotFound
+
+class ActorConverter(BaseConverter):
+    def to_python(self, actor):
+        db_item = Actor.query.filter_by(id=actor.id).first()
+        if db_item is None:
+            raise NotFound
+        return db_item
+
+    def to_url(self, actor):
+        return actor.id
 
 class ActorCollection(Resource): #TODO: Continue from this, once DB model has all necessary components
     def get(self):

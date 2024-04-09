@@ -1,6 +1,5 @@
 import json
-from requests import Response, request, url_for
-import superkinodb.api
+from flask import Response, request, url_for
 
 class MasonBuilder(dict):
     """

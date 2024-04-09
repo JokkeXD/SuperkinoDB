@@ -12,8 +12,8 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY="dev",
-        SQLALCHEMY_DATABASE_URI="sqlite:///" + os.path.join(app.instance_path, "development.db"),
-        SQLALCHEMY_TRACK_MODIFICATIONS=False
+        SQLALCHEMY_DATABASE_URI="sqlite:///" + os.path.join(app.instance_path, "dev.db"),
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
 
     if test_config is None: 
@@ -26,16 +26,14 @@ def create_app(test_config=None):
     except OSError:
         pass
     
-    db.init_app(app)
     from . import db_models
     from . import api
+    from superkinodb.resources.actor import ActorConverter
     app.cli.add_command(db_models.init_db_command)
+    app.cli.add_command(db_models.populate_db)
+    app.url_map.converters["actor"] = ActorConverter
     app.register_blueprint(api.api_bp)
-    app.config["SWAGGER"] = {
-    "title": "Sensorhub API",
-    "openapi": "3.0.3",
-    "uiversion": 3,
-    "doc_dir": "./doc",
-    }
-    # swagger = Swagger(app, template_file="doc/base.yml")
+
+    db.init_app(app)
+
     return app

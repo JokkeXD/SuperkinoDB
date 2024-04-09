@@ -1,4 +1,5 @@
 import click
+from datetime import date
 from flask import url_for, request
 from flask.cli import with_appcontext
 from superkinodb import db
@@ -102,7 +103,7 @@ class Movie(db.Model):
         back_populates="movie",
     )
 
-class Review(db.model):
+class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reviewer = db.Column(db.String, nullable=False)
     review_text = db.Column(db.String, nullable=True)
@@ -116,3 +117,31 @@ class Review(db.model):
 @with_appcontext
 def init_db_command():
     db.create_all()
+
+@click.command("testgen")
+@with_appcontext
+def populate_db():
+    for i in range(4):
+        movie = Movie(
+            name="test-movie{}".format(i),
+            release=date.today(),
+            genre="Drama"
+        )
+        db.session.add(movie)
+
+        actor = Actor(
+            name="actor{}".format(i)
+        )
+        db.session.add(actor)
+
+        director = Director(
+            name="director{}".format(i)
+        )
+        db.session.add(director)
+
+        writer = Writer(
+            name="writer{}".format(i)
+        )
+        db.session.add(writer)
+
+    db.session.commit()
