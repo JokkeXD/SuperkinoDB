@@ -1,5 +1,7 @@
 import json
 from flask import Response, request, url_for
+from superkinodb import db
+from superkinodb.db_models import *
 
 class MasonBuilder(dict):
     """
@@ -73,18 +75,96 @@ class SuperkinodbBuilder(MasonBuilder):
             url_for("api.moviecollection"),
             title="All movies"
         )
-
-    def add_control_add_actor(self, actor_item):
+    def add_control_all_actors(self):
         self.add_control(
-            "superkinodb:add_actor",
-            url_for("api.actorcollection", actor=actor_item),
-            method="GET",
+            "superkinodb:actors",
+            url_for("api.actorcollection"),
+            title="All actors"
+        )
+    def add_control_all_directors(self):
+        self.add_control(
+            "superkinodb:directors",
+            url_for("api.directorcollection"),
+            title="All directors"
+        )
+    def add_control_all_writers(self):
+        self.add_control(
+            "superkinodb:writers",
+            url_for("api.writercollection"),
+            title="All writers"
+        )
+    def add_control_add_movie(self):
+        self.add_control(
+            "add_movie",
+            url_for("api.moviecollection"),
+            method="POST",
             encoding="json",
-            title='Get an actor with ID'
-            )
-
+            title="Add a movie to the database",
+            schema=Movie.get_schema()
+        )
+    def add_control_edit_movie(self, movie_item):
+        self.add_control(
+            "edit_movie",
+            url_for("api.moviecollection", movie=movie_item),
+            method="PUT",
+            encoding="json",
+            title="Edit a movie in the database",
+            schema=Movie.get_schema()
+        )
+    def add_control_delete_movie(self, movie_item):
+        self.add_control(
+            "delete_movie",
+            url_for("api.moviecollection", movie=movie_item),
+            method="DELETE",
+            title="Delete a movie from the database"
+        )
+    def add_control_movie_reviews(self, movie_item):
+        self.add_control(
+            "reviews",
+            url_for("api.reviewcollection", movie=movie_item),
+            title="Movie review collection"
+        )
+    def add_control_add_review(self, movie_item):
+        self.add_control(
+            "add_review",
+            url_for("api.reviewcollection", movie=movie_item),
+            encoding="json",
+            title="Add review",
+            schema=Review.get_schema()
+        )
+    def add_control_edit_review(self, movie_item, review_item):
+        self.add_control(
+            "edit_review",
+            url_for("api.reviewitem", movie=movie_item, review=review_item),
+            method="PUT",
+            encoding="json",
+            title="Edit review",
+            schema=Review.get_schema()
+        )
+    def add_control_delete_review(self, movie_item, review_item):
+        self.add_control(
+            "delete_review",
+            url_for("api.reviewitem", movie=movie_item, review=review_item),
+            method="DELETE",
+            title="Delete review"
+        )
 def error_response(status_code, text, error_message):
     url = request.url
     body = MasonBuilder(url=url)
     body.add_error(text, error_message)
     return Response(json.dumps(body), status_code)
+
+def add_person(PersonObject, name):
+    person = PersonObject(
+        name=name
+    )
+    db.session.add(person)
+    return person
+
+def cleanup_personnel(PersonObject):
+    orphans = PersonObject.query.filter(~PersonObject.movies.any()).all()
+    if orphans:
+        for orphan in orphans:
+            db.session.delete(orphan)
+    return
+

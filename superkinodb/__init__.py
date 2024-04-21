@@ -1,11 +1,12 @@
 import os
-from flask import Flask
+import json
+from flask import Flask, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
-from flasgger import Swagger
+from superkinodb.consts import *
 
 db = SQLAlchemy()
-cache = Cache()
+#cache = Cache() TODO Using Cache?
 
 # Code taken from "Flask API Project Layout" tutorial on Lovelace
 def create_app(test_config=None):
@@ -28,12 +29,33 @@ def create_app(test_config=None):
     
     from . import db_models
     from . import api
-    from superkinodb.resources.actor import ActorConverter
-    app.cli.add_command(db_models.init_db_command)
+    from superkinodb.resources.movie import MovieConverter
+    from superkinodb.resources.review import ReviewConverter
+    app.cli.add_command(db_models.init_db_command) 
     app.cli.add_command(db_models.populate_db)
-    app.url_map.converters["actor"] = ActorConverter
+    app.url_map.converters["movie"] = MovieConverter
+    app.url_map.converters["review"] = ReviewConverter
     app.register_blueprint(api.api_bp)
 
     db.init_app(app)
+
+    @app.route('/', methods=["GET"])
+    def entry_point():
+        return Response(
+            status=200,
+            response=json.dumps(
+                {"@namespaces": {
+                    "superkinodb": {
+                        "name": LINK_RELATIONS
+                    }
+                },
+                "@controls": {
+                    "superkinodb:movies": {
+                        "href": "/api/movies/"
+                    }
+                }
+                })
+            )
+    
 
     return app
