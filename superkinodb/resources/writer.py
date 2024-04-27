@@ -1,8 +1,9 @@
-from flask import url_for
+import json
+from flask import Response, url_for
 from flask_restful import Resource
 from superkinodb.db_models import Writer
 from superkinodb.consts import *
-from superkinodb.utils import SuperkinodbBuilder 
+from superkinodb.utils import SuperkinodbBuilder, error_response
 
 class WriterCollection(Resource):
     def get(self):
@@ -18,11 +19,34 @@ class WriterCollection(Resource):
         body["writers"] = []
 
         for writer in writers: 
-            body["writers"].append(writer.serialize(short_form=True))
+            body["writers"].append(writer.serialize())
+
+        return Response(json.dumps(body), 200, mimetype="application/vnd.mason+json")
 
     def post(self):
-        pass
-
+        resp = error_response(
+                405,
+                "Method not allowed",
+                "Request not supported for this resource"
+            )
+        resp.headers["Allow"] = "GET"
+        return resp
+   
+    def put(self):
+        resp = error_response(
+                405,
+                "Method not allowed",
+                "Request not supported for this resource"
+            )
+        resp.headers["Allow"] = "GET"
+        return resp
+    
     def delete(self):
-        pass
+        resp = error_response(
+                405,
+                "Method not allowed",
+                "Request not supported for this resource"
+            )
+        resp.headers["Allow"] = "GET"
+        return resp
 

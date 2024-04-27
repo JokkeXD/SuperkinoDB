@@ -1,10 +1,7 @@
-from enum import unique
 import click
 from datetime import date
-from flask import url_for, request
 from flask.cli import with_appcontext
 from superkinodb import db
-from superkinodb.utils import SuperkinodbBuilder
 from superkinodb.consts import *
 
 movie_actors = db.Table('movie_actors',
@@ -19,23 +16,21 @@ movie_writers = db.Table('movie_writers',
     db.Column('movie_id', db.Integer, db.ForeignKey('movie.id')),
     db.Column('writer_id', db.Integer, db.ForeignKey('writer.id')))
 
-# Database model classes defined here.
 class Director(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
 
     movies=db.relationship(
-        "Movies",
+        "Movie",
         secondary='movie_directors',
         back_populates="directors"
     )
 
     def serialize(self):
-        data = SuperkinodbBuilder(
-            id=self.id,
-            name=self.name,
-            movies=self.movies
-        )
+        data = {
+            "name": self.name,
+            "movies": [movie.name for movie in self.movies]
+        }
         return data
 
 
@@ -50,11 +45,10 @@ class Writer(db.Model):
     )
 
     def serialize(self):
-        data = SuperkinodbBuilder(
-            id=self.id,
-            name=self.name,
-            movies=self.movies
-        )
+        data = {
+            "name": self.name,
+            "movies": [movie.name for movie in self.movies]
+        }
         return data
 
 
@@ -69,64 +63,41 @@ class Actor(db.Model):
     )
 
     def serialize(self):
-        data = SuperkinodbBuilder(
-            id=self.id,
-            name=self.name,
-            movies=self.movies
-        )
+        data = {
+            "name": self.name,
+            "movies": [movie.name for movie in self.movies]
+        }
         return data
     
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
     release = db.Column(db.Date, nullable=True)
-    genre = db.Column(db.String, nullable=False)
+    genre = db.Column(db.String, nullable=True)
 
     directors = db.relationship(
         "Director",
         secondary='movie_directors',
-        back_populates="directed",
-        backref="movies",
-        cascade="all, delete"
+        back_populates="movies"
     )
 
     writers = db.relationship(
         "Writer",
         secondary='movie_writers',
-        back_populates="wrote",
-        backref="movies",
-        cascade="all, delete"
+        back_populates="movies"
     )
 
     actors = db.relationship(
         "Actor",
         secondary='movie_actors',
-        back_populates="starred_in",
-        backref="movies",
-        cascade="all, delete"
+        back_populates="movies"
     )
 
     reviews = db.relationship(
         "Review",
-        back_populates="movie"
+        back_populates="movie",
+        cascade="all, delete"
     )
- 
-    def serialize(self, short_form=False):
-        body = SuperkinodbBuilder()
-        body.add_control("self", url_for("api.movieitem", movie=self.name))
-        body["name"] = self.name
-
-        if short_form is True:
-            return body
-        
-        body["release"] = self.release
-        body["genre"] = self.genre
-        body["actors"] = self.actors
-        body["directors"] = self.directors
-        body["writers"] = self.writers
-        body.add_namespace("superkinodb", LINK_RELATIONS)
-
-        return body
    
     @staticmethod
     def get_schema():
@@ -141,7 +112,8 @@ class Movie(db.Model):
         }
         props["release"] = {
             "description": "Release date",
-            "type": "date"
+            "type": "string",
+            "format": "date"
         }
         props["genre"] = {
             "description": "Genre(s)",
@@ -170,29 +142,30 @@ class Movie(db.Model):
         }
         return schema
 
-class Review(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    reviewer = db.Column(db.String, nullable=False)
-    review_text = db.Column(db.String, nullable=True)
-    score = db.Column(db.Integer, nullable=False)
-
-    movie_name = db.Column(db.ForeignKey("movie.name", ondelete="CASCADE"), nullable=False)
-    movie = db.relationship("Movie", back_populates="reviews")
-
     def serialize(self, short_form=False):
-        body = SuperkinodbBuilder()
-        body.add_control("self", url_for("api.reviewitem", movie=self.movie, review=self.reviewer))
-        body["reviewer"] = self.reviewer
-        body["score"] = self.score
+        body = {} 
+        body["name"] = self.name
 
         if short_form is True:
             return body
         
-        body["review_text"] = self.review_text
-        body["movie"] = self.movie
-        body.add_namespace("superkinodb", LINK_RELATIONS)
+        body["release"] = self.release.isoformat()
+        body["genre"] = self.genre
+
+        body["actors"] = [actor.name for actor in self.actors]
+        body["directors"] = [director.name for director in self.directors]
+        body["writers"] = [writer.name for writer in self.writers]
 
         return body
+
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reviewer = db.Column(db.String, nullable=False)
+    review_text = db.Column(db.String(1000), nullable=True)
+    score = db.Column(db.Double, nullable=False)
+
+    movie_name = db.Column(db.ForeignKey("movie.name", ondelete="CASCADE"), nullable=False)
+    movie = db.relationship("Movie", back_populates="reviews")
 
     @staticmethod
     def get_schema():
@@ -207,13 +180,30 @@ class Review(db.Model):
         }
         props["review_text"] = {
             "description": "Freely written review text",
-            "type": "string"
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 1000
         }
         props["score"] = {
             "description": "Score 0.0 - 10.0",
-            "type": "number"
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 10.0
         }
         return schema
+
+
+    def serialize(self, short_form=False):
+        body = {}
+        body["reviewer"] = self.reviewer
+        body["score"] = self.score
+
+        if short_form is True:
+            return body
+        
+        body["review_text"] = self.review_text
+
+        return body
 
 @click.command("init-db")
 @with_appcontext
