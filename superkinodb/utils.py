@@ -2,6 +2,7 @@ import json
 from flask import Response, request, url_for
 from superkinodb import db
 from superkinodb.db_models import *
+from sqlalchemy import all_, event
 
 class MasonBuilder(dict):
     """
@@ -109,7 +110,7 @@ class SuperkinodbBuilder(MasonBuilder):
             method="PUT",
             encoding="json",
             title="Edit a movie in the database",
-            schema=Movie.get_schema()
+            schema=movie_item.get_schema()
         )
     def add_control_delete_movie(self, movie_item):
         self.add_control(
@@ -128,6 +129,7 @@ class SuperkinodbBuilder(MasonBuilder):
         self.add_control(
             "add_review",
             url_for("api.reviewcollection", movie=movie_item),
+            method="POST",
             encoding="json",
             title="Add review",
             schema=Review.get_schema()
@@ -152,7 +154,7 @@ def error_response(status_code, text, error_message):
     url = request.url
     body = MasonBuilder(url=url)
     body.add_error(text, error_message)
-    return Response(json.dumps(body), status_code)
+    return Response(json.dumps(body), status_code, mimetype="application/vnd.mason+json")
 
 def add_person(PersonObject, name):
     person = PersonObject(
@@ -161,10 +163,26 @@ def add_person(PersonObject, name):
     db.session.add(person)
     return person
 
-def cleanup_personnel(PersonObject):
+def delete_orphans(PersonObject):
     orphans = PersonObject.query.filter(~PersonObject.movies.any()).all()
-    if orphans:
-        for orphan in orphans:
-            db.session.delete(orphan)
+    
+    for orphan in orphans:
+        db.session.delete(orphan)
+    return
+
+@event.listens_for(Movie, 'after_delete')
+def cleanup_personnel_after_delete(mapper, connection, target):
+    delete_orphans(Actor)
+    delete_orphans(Director)
+    delete_orphans(Writer)
+    return
+
+@event.listens_for(db.session, 'after_flush')
+def cleanup_personnel_after_update(session, flush_context):
+    for obj in session.dirty:
+        if isinstance(obj, Movie):
+            delete_orphans(Actor)
+            delete_orphans(Director)
+            delete_orphans(Writer)
     return
 
