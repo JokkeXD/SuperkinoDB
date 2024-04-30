@@ -60,17 +60,28 @@ class ReviewCollection(Resource):
 
         review = Review(
             reviewer=request.json["reviewer"],
-            review_text=request.json["review_text"],
             score=request.json["score"],
+            review_text=request.json.get("review_text"),
             movie_name=movie.name
         )
+
+        review_by_reviewer_exists = Review.query.filter_by(
+                reviewer=review.reviewer,
+                movie_name=movie.name).first()
+
+        if review_by_reviewer_exists:
+            return error_response(
+                409,
+                "Entry by this reviewer already exists",
+                "Reviewer must be unique within a review collection"
+            )
 
         try:
             db.session.add(review)
         except IntegrityError as e:
             return error_response(
                 409,
-                "Entry by this reviewer already exists",
+                "Database operation failed",
                 str(e)
             )
 
