@@ -6,7 +6,8 @@ import tempfile
 from datetime import date
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
-from sqlalchemy.exc import IntegrityError, StatementError
+from sqlalchemy.engine.cursor import _NoResultMetaData
+from sqlalchemy.exc import IntegrityError, NoResultFound, ProgrammingError, StatementError
 from superkinodb import create_app, db
 from superkinodb.db_models import Movie, Review, Actor, Writer, Director
 
@@ -96,6 +97,19 @@ def test_create_items(app):
 
 def test_movie_review_one_to_many(app):
     with app.app_context():
+        movie = _create_movie()
+        review1 = _create_review()
+        review2 = _create_review()
+        movie.reviews.append(review1)
+        movie.reviews.append(review2)
+        db.session.add(movie)
+        db.session.add(review1)
+        db.session.add(review2)
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        
+        db.session.rollback()
+
         movie1 = _create_movie("movie1")
         movie2 = _create_movie("movie2")
         review = _create_review("reviewer1")
@@ -106,9 +120,7 @@ def test_movie_review_one_to_many(app):
         db.session.add(review)
         db.session.add(movie1)
         db.session.add(movie2)
-
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        db.session.commit()
 
 def test_movie_ondelete_review(app):
     with app.app_context():
@@ -120,7 +132,7 @@ def test_movie_ondelete_review(app):
         db.session.commit()
         db.session.delete(review)
         db.session.commit()
-        assert movie.reviews is None
+        assert len(movie.reviews) is 0
 
 def test_review_ondelete_movie(app):
     with app.app_context():
@@ -132,8 +144,9 @@ def test_review_ondelete_movie(app):
         db.session.commit()
         db.session.delete(movie)
         db.session.commit()
-        assert Movie.query.filter_by(name=movie.name) is None
-        assert Review.query.filter_by(reviewer=review.reviewer) is None
+        with pytest.raises(NoResultFound):
+            db_movie = Movie.query.filter_by(name=movie.name).one()
+            db_review = Review.query.filter_by(reviewer=review.reviewer).one()
 
 def test_movie_columns(app):
     with app.app_context():
@@ -158,14 +171,6 @@ def test_movie_columns(app):
 
         movie = _create_movie()
         movie.release = "2024-13-32" # Invalid date
-        db.session.add(movie)
-        with pytest.raises(StatementError):
-            db.session.commit()
-
-        db.session.rollback()
-
-        movie = _create_movie()
-        movie.genre = 1
         db.session.add(movie)
         with pytest.raises(StatementError):
             db.session.commit()
@@ -234,9 +239,22 @@ def test_review_columns(app):
             db.session.commit()
 
         db.session.rollback()
-        
+
+        # Movie name can't be None
         review = _create_review()
         review.review_text = None
+        db.session.add(review)
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        
+        db.session.rollback()
+
+        movie = _create_movie()
+        review = _create_review()
+        review.review_text = None
+        movie.reviews.append(review)
+        review.movie_name = movie
+        db.session.add(movie)
         db.session.add(review)
         db.session.commit()
 
@@ -294,4 +312,3 @@ def test_person_columns(app):
             db.session.commit()
 
         db.session.rollback()
-

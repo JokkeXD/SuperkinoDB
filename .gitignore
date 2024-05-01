@@ -3,3 +3,4 @@
 __pycache__/
 DBdiagram.txt
 instance
+.coverage
