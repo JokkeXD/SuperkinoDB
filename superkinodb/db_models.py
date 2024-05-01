@@ -1,6 +1,7 @@
 import click
 from datetime import date
 from flask.cli import with_appcontext
+from sqlalchemy import UniqueConstraint
 from superkinodb import db
 from superkinodb.consts import *
 
@@ -164,8 +165,14 @@ class Review(db.Model):
     review_text = db.Column(db.String(1000), nullable=True)
     score = db.Column(db.Double, nullable=False)
 
-    movie_name = db.Column(db.ForeignKey("movie.name", ondelete="CASCADE"), nullable=False)
+    movie_name = db.Column(db.ForeignKey("movie.name", ondelete="CASCADE"),
+                                nullable=False
+                            )
     movie = db.relationship("Movie", back_populates="reviews")
+
+    __table_args__ = (
+            UniqueConstraint('movie_name', 'reviewer', name='unique_movie_review'),
+    )
 
     @staticmethod
     def get_schema():
