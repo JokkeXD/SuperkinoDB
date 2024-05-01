@@ -6,8 +6,7 @@ import tempfile
 from datetime import date
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
-from sqlalchemy.engine.cursor import _NoResultMetaData
-from sqlalchemy.exc import IntegrityError, NoResultFound, ProgrammingError, StatementError
+from sqlalchemy.exc import IntegrityError, NoResultFound, StatementError
 from superkinodb import create_app, db
 from superkinodb.db_models import Movie, Review, Actor, Writer, Director
 

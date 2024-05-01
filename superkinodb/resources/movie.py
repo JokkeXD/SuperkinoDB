@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from datetime import date
 from jsonschema import validate, ValidationError, draft7_format_checker
 from flask import Response, request, url_for
 from flask_restful import Resource
@@ -54,11 +55,10 @@ class MovieCollection(Resource):
         try:
             validate(request.json, Movie.get_schema(), format_checker=draft7_format_checker)
             release = request.json.get('release')
-            
             if release:
-                date = datetime.strptime(release, '%Y-%m-%d').date()
+                release_date = datetime.strptime(release, '%Y-%m-%d').date()
             else:
-                date = None
+                release_date = date.today()
         
         except ValidationError as e:
             return error_response(
@@ -69,7 +69,7 @@ class MovieCollection(Resource):
         
         movie = Movie(
             name=request.json["name"],
-            release=date,
+            release=release_date,
             genre=request.json.get("genre"),
         )
 
@@ -144,7 +144,7 @@ class MovieItem(Resource):
         body.add_control_movie_reviews(movie)
         return Response(json.dumps(body), 200, mimetype="application/vnd.mason+json")
 
-    def post(self):
+    def post(self, movie):
         resp = error_response(
                 405,
                 "Method not allowed",
@@ -166,9 +166,9 @@ class MovieItem(Resource):
             release = request.json.get('release')
             
             if release:
-                date = datetime.strptime(release, '%Y-%m-%d').date()
+                release_date = datetime.strptime(release, '%Y-%m-%d').date()
             else:
-                date = None
+                release_date = date.today()
 
         except ValidationError as e:
             return error_response(
@@ -178,37 +178,37 @@ class MovieItem(Resource):
             )
 
         movie.name = request.json["name"]
-        movie.release = date
-        movie.genre = request.json.get("genre")
-
-        actors = []
-        for item in request.json.get("actors", []):
-            actor = Actor.query.filter_by(name=item).first()
-            if actor is None:
-                actor = add_person(Actor, item)
-            actors.append(actor)
-        
-        movie.actors = actors
-
-        directors = []
-        for item in request.json.get("directors", []):
-            director = Director.query.filter_by(name=item).first()
-            if director is None:
-                director = add_person(Director, item)
-            directors.append(director)
-
-        movie.directors = directors
-        
-        writers = []
-        for item in request.json.get("writers", []):
-            writer = Writer.query.filter_by(name=item).first()
-            if writer is None:
-                writer = add_person(Writer, item)
-            writers.append(writer)
-        
-        movie.writers = writers
+        movie.release = release_date
+        movie.genre = request.json.get("genre", "")
 
         try:
+            actors = []
+            for item in request.json.get("actors", []):
+                actor = Actor.query.filter_by(name=item).first()
+                if actor is None:
+                    actor = add_person(Actor, item)
+                actors.append(actor)
+            
+            movie.actors = actors
+
+            directors = []
+            for item in request.json.get("directors", []):
+                director = Director.query.filter_by(name=item).first()
+                if director is None:
+                    director = add_person(Director, item)
+                directors.append(director)
+
+            movie.directors = directors
+            
+            writers = []
+            for item in request.json.get("writers", []):
+                writer = Writer.query.filter_by(name=item).first()
+                if writer is None:
+                    writer = add_person(Writer, item)
+                writers.append(writer)
+            
+            movie.writers = writers
+
             db.session.commit()
         except IntegrityError as e: return error_response(
                 409,
@@ -228,4 +228,4 @@ class MovieItem(Resource):
                 "Database operation error",
                 str(e)
             )
-
+        return Response(status=204)
