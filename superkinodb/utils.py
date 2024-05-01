@@ -106,7 +106,7 @@ class SuperkinodbBuilder(MasonBuilder):
     def add_control_edit_movie(self, movie_item):
         self.add_control(
             "edit_movie",
-            url_for("api.moviecollection", movie=movie_item),
+            url_for("api.movieitem", movie=movie_item),
             method="PUT",
             encoding="json",
             title="Edit a movie in the database",
@@ -115,7 +115,7 @@ class SuperkinodbBuilder(MasonBuilder):
     def add_control_delete_movie(self, movie_item):
         self.add_control(
             "delete_movie",
-            url_for("api.moviecollection", movie=movie_item),
+            url_for("api.movieitem", movie=movie_item),
             method="DELETE",
             title="Delete a movie from the database"
         )

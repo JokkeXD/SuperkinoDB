@@ -48,5 +48,9 @@ def create_app(test_config=None):
         body.add_control("superkinodb:movies", url_for("api.moviecollection"))
         return Response(json.dumps(body), 200, mimetype="application/vnd.mason+json")
 
+    @app.route(LINK_RELATIONS)
+    def link_relations():
+        return "Link relations for Superkinodb"
+
     return app
 

@@ -92,7 +92,7 @@ class ReviewCollection(Resource):
                 headers={"Location": url_for("api.reviewitem", movie=movie, review=review)}
             )
     
-    def delete(self):
+    def put(self, movie):
         resp = error_response(
                 405,
                 "Method not allowed",
@@ -100,7 +100,15 @@ class ReviewCollection(Resource):
             )
         resp.headers["Allow"] = "GET, POST"
         return resp
-
+    
+    def delete(self, movie):
+        resp = error_response(
+                405,
+                "Method not allowed",
+                "Request not supported for this resource"
+            )
+        resp.headers["Allow"] = "GET, POST"
+        return resp
 class ReviewItem(Resource):
     def get(self, review, movie):
 
@@ -108,13 +116,13 @@ class ReviewItem(Resource):
         body["data"] = review.serialize()
         body.add_control("self", url_for("api.reviewitem", movie=movie, review=review))
         body.add_namespace("superkinodb", LINK_RELATIONS)
-        body.add_control("reviewcollection", url_for("api.reviewcollection", movie=movie))
+        body.add_control("review_collection", url_for("api.reviewcollection", movie=movie))
         body.add_control_edit_review(movie_item=movie, review_item=review)
         body.add_control_delete_review(movie_item=movie, review_item=review)
 
         return Response(json.dumps(body), 200, mimetype="application/vnd.mason+json")
 
-    def post(self):
+    def post(self, review, movie):
         resp = error_response(
                 405,
                 "Method not allowed",
@@ -156,5 +164,12 @@ class ReviewItem(Resource):
 
     def delete(self, review, movie):
         db.session.delete(review)
-        db.session.commit()
-
+        try:
+            db.session.commit()
+        except IntegrityError as e:
+            return error_response(
+                409,
+                "Database operation error",
+                str(e)
+            )
+        return Response(status=204)
