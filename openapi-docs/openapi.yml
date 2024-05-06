@@ -1,0 +1,663 @@
+---
+openapi: 3.0.3
+servers:
+- url: /api
+components:
+  parameters:
+    movie:
+      description: Selected movie's unique name
+      in: path
+      name: movie
+      required: true
+      schema:
+        type: string
+    review:
+      description: Selected review's unique name
+      in: path
+      name: review
+      required: true
+      schema:
+        type: string
+  schemas:
+    Movie:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          description: Movie's name
+          type: string
+        release:
+          description: Release date
+          type: string
+          format: date
+        genre:
+          description: Genre(s)
+          type: string
+        actors:
+          description: Actors in the movie, limit to main roles
+          type: array
+          items:
+            type: string
+        directors:
+          description: Directors of the movie
+          type: array
+          items:
+            type: string
+        writers:
+          description: Writers of the movie
+          type: array
+          items:
+            type: string
+    Review:
+      type: object
+      required:
+        - reviewer
+        - score
+      properties:
+        reviewer:
+          description: Reviewer's name or identifier
+          type: string
+        review_text:
+          description: Freely written review text
+          type: string
+          minLength: 0
+          maxLength: 1000
+        score:
+          description: Score 0.0 - 10.0
+          type: number
+          minimum: 0.0
+          maximum: 10.0
+info:
+  title: Programmable Web Project
+  version: 1.0.0
+paths:
+  /movies/:
+    get:
+      description: Retrieve a collection of movies
+      responses:
+        '200':
+          description: Collection of movies in database
+          content:
+            application/vnd.mason+json:
+              example:
+                "@namespaces":
+                  superkinodb:
+                    name: "/superkinodb/link-relation/"
+                "@controls":
+                  self:
+                    href: "/api/movies/"
+                  add_movie:
+                    method: POST
+                    encoding: json
+                    title: Add a movie to the database
+                    schema:
+                      type: object
+                      required:
+                        - name
+                      properties:
+                        name:
+                          description: Movie's name
+                          type: string
+                        release:
+                          description: Release date
+                          type: string
+                          format: date
+                        genre:
+                          description: Genre(s)
+                          type: string
+                        actors:
+                          description: Actors in the movie, limit to main roles
+                          type: array
+                          items:
+                            type: string
+                        directors:
+                          description: Directors of the movie
+                          type: array
+                          items:
+                            type: string
+                        writers:
+                          description: Writers of the movie
+                          type: array
+                          items:
+                            type: string
+                    href: "/api/movies/"
+                  superkinodb_actors:
+                    title: All actors
+                    href: "/api/actors/"
+                  superkinodb_directors:
+                    title: All directors
+                    href: "/api/directors/"
+                  superkinodb_writers:
+                    title: All writers
+                    href: "/api/writers/"
+                  movies:
+                    - "@controls":
+                        self:
+                          href: "/api/movies/test-movie0/"
+                      data:
+                        name: test-movie0
+                    - "@controls":
+                        self:
+                          href: "/api/movies/test-movie1/"
+                      data:
+                        name: test-movie1
+                    - "@controls":
+                        self:
+                          href: "/api/movies/test-movie2/"
+                      data:
+                        name: test-movie2
+                    - "@controls":
+                        self:
+                          href: "/api/movies/test-movie3/"
+                      data:
+                        name: test-movie3
+    post:
+      description: Add a new movie
+      requestBody:
+        description: JSON document that contains information for new movie
+        required: true
+        content:
+          application/vnd.mason+json:
+            schema:
+              $ref: '#/components/schemas/Movie'
+            example:
+              name: pwp deadline
+              release: '6.5.2024'
+              genre: horror
+              actors: pete
+              directors: kalle
+              writers: make
+      responses:
+        '201':
+          description: The movie was added succesfully
+          headers:
+            Location: 
+              description: URI of the movie
+              schema: 
+                type: string
+        '400':
+          description: Invalid JSON schema
+        '409':
+          description: A movie with the same name already exists
+        '415':
+          description: Wrong media type was used
+    put:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, POST"
+    delete:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, POST"
+  /movies/{movie}/:
+    parameters:
+      - $ref: '#/components/parameters/movie'
+    get:
+      description: Retrieve details on specific movie
+      responses:
+        '200':
+          description: Information on specific movie
+          content:
+            application/vnd.mason+json:
+              example:
+                data:
+                  name: test-movie0
+                  release: "2024-05-03"
+                  genre: Drama
+                  actors: []
+                  directors: []
+                  writers: []
+                "@controls":
+                  self:
+                    href: "/api/movies/test-movie0/"
+                  superkinodb:movies:
+                    title: All movies
+                    href: "/api/movies/"
+                  edit_movie:
+                    method: PUT
+                    encoding: json
+                    title: Edit a movie in the database
+                    schema:
+                      type: object
+                      required:
+                        - name
+                      properties:
+                        name:
+                          description: Movie's name
+                          type: string
+                        release:
+                          description: Release date
+                          type: string
+                          format: date
+                        genre:
+                          description: Genre(s)
+                          type: string
+                        actors:
+                          description: Actors in the movie, limit to main roles
+                          type: array
+                          items:
+                            type: string
+                        directors:
+                          description: Directors of the movie
+                          type: array
+                          items:
+                            type: string
+                        writers:
+                          description: Writers of the movie
+                          type: array
+                          items:
+                            type: string
+                    href: "/api/movies/test-movie0/"
+                  delete_movie:
+                    method: DELETE
+                    title: Delete a movie from the database
+                    href: "/api/movies/test-movie0/"
+                  reviews:
+                    title: Movie review collection
+                    href: "/api/movies/test-movie0/reviews/"
+    post:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, PUT, DELETE"
+    put:
+      description: Update details about specific movie
+      requestBody:
+        description: JSON document that contains new information about specific movie
+        content:
+          application/vnd.mason+json:
+            schema:
+              $ref: '#/components/schemas/Movie'
+            example:
+              name: movie1
+              release: '2005'
+              genre: mystery
+              actors: null
+              directors: kaarle
+              writers: null
+      responses:
+        '201':
+          description: The movie was updated succesfully
+          headers:
+            Location: 
+              description: URI of the movie
+              schema: 
+                type: string
+        '400':
+          description: Invalid JSON schema
+        '409':
+          description: Database operation failed
+        '415':
+          description: Wrong media type was used
+    delete:
+     description: Delete the selected movie
+     responses:
+       '204':
+         description: The movie was successfully deleted
+       '409':
+         description: Database operation error
+  /movies/{movie}/reviews/:
+    parameters:
+    - $ref: '#/components/parameters/movie'
+    get:
+      description: Retrieve a collection of reviews for specific movie
+      responses:
+        '200':
+          description: Collection of reviews in database
+          content:
+            application/vnd.mason+json:
+              example:
+                "@namespaces":
+                  superkinodb:
+                    name: "/superkinodb/link-relation/"
+                "@controls":
+                  self:
+                    href: "/api/movies/test-movie0/reviews/"
+                  movie:
+                    href: "/api/movies/test-movie0/"
+                  add_review:
+                    method: POST
+                    encoding: json
+                    title: Add review
+                    schema:
+                      type: object
+                      required:
+                        - reviewer
+                        - score
+                      properties:
+                        reviewer:
+                          description: Reviewer's name or identifier
+                          type: string
+                        review_text:
+                          description: Freely written review text
+                          type: string
+                          minLength: 0
+                          maxLength: 1000
+                        score:
+                          description: Score 0.0 - 10.0
+                          type: number
+                          minimum: 0.0
+                          maximum: 10.0
+                    href: "/api/movies/test-movie0/reviews/"
+                reviews: []
+    post:
+      description: Add a new review
+      requestBody:
+        description: JSON document that contains information for review
+        required: true
+        content:
+          application/vnd.mason+json:
+            schema:
+              $ref: '#/components/schemas/Review'
+            example:
+            - reviewer: janne
+              review_text: 'bad movie'
+              score: 4.5
+      responses:
+        '201':
+          description: The review was added succesfully
+          headers:
+            Location: 
+              description: URI of the review
+              schema: 
+                type: string
+        '400':
+          description: Invalid JSON schema
+        '409':
+          description: Entry by this reviewer already exists
+        '415':
+          description: Wrong media type was used
+    put:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, POST"
+    delete:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, POST"
+  /movies/{movie}/reviews/{review}/:
+    parameters:
+    - $ref: '#/components/parameters/movie'
+    - $ref: '#/components/parameters/review'
+    get:
+      description: Retrieve specific review for specified movie
+      responses:
+        '200':
+          description: Specific review
+          content:
+            application/vnd.mason+json:
+              examples:
+                semidetail-review:
+                  description: A review with some details added
+                  value:
+                    reviewer: taavi
+                    review_text: null
+                    score: 6.0
+                fulldetail-review:
+                  description: A review with all details added
+                  value:
+                    reviewer: gerhard
+                    review_text: 'average movie'
+                    score: 7.0
+    post:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET, PUT, DELETE"
+    put:
+      description: Update details about specific review
+      requestBody:
+        description: JSON document that contains new information about specific review
+        content:
+          application/vnd.mason+json:
+            schema:
+              $ref: '#/components/schemas/Review'
+            example:
+              reviewer: gerhard
+              review_text: 'above-average movie'
+              score: 8.0
+      responses:
+        '201':
+          description: The review was updated succesfully
+          headers:
+            Location: 
+              description: URI of the review
+              schema: 
+                type: string
+        '400':
+          description: Invalid JSON schema
+        '409':
+          description: Database operation failed
+        '415':
+          description: Wrong media type was used
+    delete:
+     description: Delete the selected review
+     responses:
+       '204':
+         description: The review was successfully deleted
+       '409':
+         description: Database operation error
+  /actors/:
+    get:
+      description: Retrieve a collection of actors
+      responses:
+        '200':
+          description: Collection of actors in database
+          content:
+            application/vnd.mason+json:
+              example:
+                "@namespaces":
+                superkinodb:
+                  name: "/superkinodb/link-relation/"
+                "@controls":
+                  self:
+                    href: "/api/actors/"
+                  superkinodb:movies:
+                    title: All movies
+                    href: "/api/movies/"
+                  superkinodb:directors:
+                    title: All directors
+                    href: "/api/directors/"
+                  superkinodb:writers:
+                    title: All writers
+                    href: "/api/writers/"
+                actors:
+                  - name: actor0
+                    movies: []
+                  - name: actor1
+                    movies: []
+                  - name: actor2
+                    movies: []
+                  - name: actor3
+                    movies: []
+    post:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    put:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    delete:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+  /directors/:
+    get:
+      description: Retrieve a collection of directors
+      responses:
+        '200':
+          description: Collection of directors in database
+          content:
+            application/vnd.mason+json:
+              example:
+                "@namespaces":
+                  superkinodb:
+                    name: "/superkinodb/link-relation/"
+                "@controls":
+                  self:
+                    href: "/api/directors/"
+                  superkinodb:movies:
+                    title: All movies
+                    href: "/api/movies/"
+                  superkinodb:actors:
+                    title: All actors
+                    href: "/api/actors/"
+                  superkinodb:writers:
+                    title: All writers
+                    href: "/api/writers/"
+                directors:
+                  - name: director0
+                    movies: []
+                  - name: director1
+                    movies: []
+                  - name: director2
+                    movies: []
+                  - name: director3
+                    movies: []
+    post:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    put:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    delete:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+  /writers/:
+    get:
+      description: Retrieve a collection of writers
+      responses:
+        '200':
+          description: Collection of writers in database
+          content:
+            application/vnd.mason+json:
+              example:
+                "@namespaces":
+                  superkinodb:
+                    name: "/superkinodb/link-relation/"
+                "@controls":
+                  self:
+                    href: "/api/writers/"
+                  superkinodb:movies:
+                    title: All movies
+                    href: "/api/movies/"
+                  superkinodb:actors:
+                    title: All actors
+                    href: "/api/actors/"
+                  superkinodb:directors:
+                    title: All directors
+                    href: "/api/directors/"
+                writers:
+                  - name: writer0
+                    movies: []
+                  - name: writer1
+                    movies: []
+                  - name: writer2
+                    movies: []
+                  - name: writer3
+                    movies: []
+    post:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    put:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
+    delete:
+      description: Not supported
+      responses:
+        '405':
+          description: Request not supported for this resource
+          headers:
+            Allow:
+              schema:
+                type: string
+                example: "GET"
